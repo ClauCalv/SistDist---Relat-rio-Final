@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/final.iml" filepath="$PROJECT_DIR$/.idea/final.iml" />
+      <module fileurl="file://$PROJECT_DIR$/pratica2remover/pratica2remover.iml" filepath="$PROJECT_DIR$/pratica2remover/pratica2remover.iml" />
+      <module fileurl="file://$PROJECT_DIR$/pratica3/pratica3.iml" filepath="$PROJECT_DIR$/pratica3/pratica3.iml" />
+      <module fileurl="file://$PROJECT_DIR$/pratica4/pratica4.iml" filepath="$PROJECT_DIR$/pratica4/pratica4.iml" />
+      <module fileurl="file://$PROJECT_DIR$/pratica5/pratica5.iml" filepath="$PROJECT_DIR$/pratica5/pratica5.iml" />
+      <module fileurl="file://$PROJECT_DIR$/projeto/projeto.iml" filepath="$PROJECT_DIR$/projeto/projeto.iml" />
+    </modules>
+  </component>
+</project>
