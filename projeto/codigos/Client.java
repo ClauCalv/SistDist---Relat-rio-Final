@@ -2,8 +2,10 @@ import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.data.Stat;
+import org.apache.zookeeper.ZooKeeper;
 
 public class Client {
+    static ZooKeeper zk = null;
 
     public static final int USER_NOT_FOUND = 0, LOGIN_VALID = 1, BAD_PASSWORD = 2;
     private static String address = "localhost"; // default
@@ -18,7 +20,7 @@ public class Client {
     }
 
     public static Client createUser(String login, String senha) {
-        string root = login;
+        String root = login;
         // Create ZK node name
         if (zk != null) {
             try {
