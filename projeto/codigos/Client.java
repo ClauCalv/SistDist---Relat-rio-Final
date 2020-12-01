@@ -9,6 +9,7 @@ public class Client {
 
     public static final int USER_NOT_FOUND = 0, LOGIN_VALID = 1, BAD_PASSWORD = 2;
     private static String address = "localhost"; // default
+    private static String loginUser = "";
 
     public static int queryLogin(String login, String senha) {
         return 1; // TODO
@@ -20,6 +21,7 @@ public class Client {
     }
 
     public static Client createUser(String login, String senha) {
+        loginUser = login;
         String root = login;
         // Create ZK node name
         if (zk != null) {
@@ -44,6 +46,16 @@ public class Client {
     }
 
     public void quit() {
+
+        try {
+            zk.delete(address + "/" + loginUser, 0);
+        } catch (InterruptedException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (KeeperException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
         // TODO
     }
 }
