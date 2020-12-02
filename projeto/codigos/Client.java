@@ -1,18 +1,18 @@
-import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.ZooDefs.Ids;
-import org.apache.zookeeper.data.Stat;
-import org.apache.zookeeper.ZooKeeper;
+import zkcodes.ZookeeperSimple;
+
+import java.util.Arrays;
 
 public class Client {
-    static ZooKeeper zk = null;
 
     public static final int USER_NOT_FOUND = 0, LOGIN_VALID = 1, BAD_PASSWORD = 2;
     private static String address = "localhost"; // default
-    private static String loginUser = "";
+    private static final String usersRoot = "users", onlineUsersRoot = "online";
 
-    public static int queryLogin(String login, String senha) {
-        return 1; // TODO
+    private final String username;
+
+    private Client(String username) {
+        this.username = username;
     }
 
     public static void setup(String address) {
@@ -20,42 +20,34 @@ public class Client {
             Client.address = address;
     }
 
+    public static int queryLogin(String login, String senha) {
+        ZookeeperSimple users = new ZookeeperSimple(address, usersRoot);
+        if(users.exists(login)){
+            byte[] senhaGuardada = users.getData(login);
+            byte[] senhaNova = senha.getBytes(); // Se usássemos alguma criptografia faríamos aqui
+            return Arrays.equals(senhaGuardada, senhaNova) ? LOGIN_VALID : BAD_PASSWORD;
+        } else return USER_NOT_FOUND;
+    }
+
+    public static Client doLogin(String login) {
+        //Não sei se precisa uma segunda validação aqui
+        ZookeeperSimple online = new ZookeeperSimple(address, onlineUsersRoot);
+        online.createEmpty(login, true);
+        return new Client(login);
+    }
+
     public static Client createUser(String login, String senha) {
-        loginUser = login;
-        String root = login;
-        // Create ZK node name
-        if (zk != null) {
-            try {
-                Stat s = zk.exists(root, false);
-                if (s == null) {
-                    zk.create(root, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-                }
-            } catch (KeeperException e) {
-                System.out.println("Keeper exception when instantiating queue: " + e.toString());
-            } catch (InterruptedException e) {
-                System.out.println("Interrupted exception");
-            }
-        }
+        ZookeeperSimple users = new ZookeeperSimple(address, usersRoot);
+        byte[] senhaNova = senha.getBytes(); // Se usássemos alguma criptografia faríamos aqui
 
-        return null;
+        users.createWithData(login, senhaNova);
+        return doLogin(login);
     }
 
-    public static Client doLogin(String login, String senha) {
-        // TODO
-        return null;
-    }
+
 
     public void quit() {
-
-        try {
-            zk.delete(address + "/" + loginUser, 0);
-        } catch (InterruptedException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } catch (KeeperException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-        // TODO
+        ZookeeperSimple online = new ZookeeperSimple(address, onlineUsersRoot);
+        online.delete(username);
     }
 }

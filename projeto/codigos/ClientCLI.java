@@ -136,7 +136,7 @@ public class ClientCLI {
                     client = Client.createUser(login, senha);
                 }
             } else if (status == Client.LOGIN_VALID){
-                client = Client.doLogin(login, senha);
+                client = Client.doLogin(login);
             } else if (status == Client.BAD_PASSWORD){
                 msg("Senha incorreta! Tente novamente");
             }
