@@ -35,11 +35,12 @@ public class Client {
             byte[] senhaGuardada = users.getData(login);
             byte[] senhaNova = senha.getBytes(); // Se usássemos alguma criptografia faríamos aqui
             return Arrays.equals(senhaGuardada, senhaNova) ? LOGIN_VALID : BAD_PASSWORD;
-        } else return USER_NOT_FOUND;
+        } else
+            return USER_NOT_FOUND;
     }
 
     public static Client doLogin(String login) {
-        //Não sei se precisa uma segunda validação aqui
+        // Não sei se precisa uma segunda validação aqui
         ZookeeperSimple online = new ZookeeperSimple(address, onlineUsersRoot);
         online.createEmpty(login, true);
         return new Client(login);
@@ -59,14 +60,15 @@ public class Client {
     }
 
     // por enquanto canEnter e canCreate são só opostas, basta existir/não existir.
-    // depois vamos colocar uma regra de se ela já está em andamento não dá mais pra entrar
+    // depois vamos colocar uma regra de se ela já está em andamento não dá mais pra
+    // entrar
     public boolean canEnterReuniao(String r) {
         ZookeeperSimple reuniao = new ZookeeperSimple(address, reunioesRoot);
         return reuniao.exists(r);
     }
 
     public Reuniao enterReuniao(String r) {
-        //TODO
+        // TODO
         return null;
     }
 
@@ -80,22 +82,38 @@ public class Client {
         return !reuniao.exists(r);
     }
 
-    public Reuniao createReuniao(String r) {
-        //TODO
-        return enterReuniao(r);
+    public class Reuniao {
+        public void print() {
+            System.out.println("This is an inner class");
+        }
+
+        // TODO
+        public Reuniao createReuniao(String r) {
+            return enterReuniao(r);
+        }
+
+        public void reuniaoLoop(Reuniao enterReuniao) {
+            // TODO
+        }
     }
 
     public int sendMessage(String target, String msg) {
 
         ZookeeperSimple chats = new ZookeeperSimple(address, chatsRoot);
-        if(!chats.exists(target))
+        if (!chats.exists(target))
             return USER_NOT_FOUND;
 
         ZookeeperQueue messageQueue = new ZookeeperQueue(address, chatsRoot + "/" + target);
-        byte [] targetbs = target.getBytes();
+        byte[] targetbs = target.getBytes();
         byte[] msgbs = msg.getBytes();
         ByteArrayOutputStream baos = new ByteArrayOutputStream(Integer.BYTES + targetbs.length + msgbs.length);
-        baos.write(ByteBuffer.allocate(Integer.BYTES).putInt(targetbs.length).array(), 0, Integer.BYTES); //Não acredito que seja tão foda levar um int a um byte[4].
+        baos.write(ByteBuffer.allocate(Integer.BYTES).putInt(targetbs.length).array(), 0, Integer.BYTES); // Não
+                                                                                                          // acredito
+                                                                                                          // que seja
+                                                                                                          // tão foda
+                                                                                                          // levar um
+                                                                                                          // int a um
+                                                                                                          // byte[4].
         baos.write(targetbs, 0, targetbs.length);
         baos.write(msgbs, 0, Math.max(msgbs.length, MAX_MESSAGE_SIZE));
         byte[] message = baos.toByteArray();
@@ -112,8 +130,6 @@ public class Client {
         buf.get(sourceby, Integer.BYTES, sourceSize);
         buf.get(msgby, Integer.BYTES + sourceSize, msgby.length);
 
-        return new String[]{new String(sourceby), new String(msgby)};
+        return new String[] { new String(sourceby), new String(msgby) };
     }
 }
-
-

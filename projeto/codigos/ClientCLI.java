@@ -5,6 +5,7 @@ public class ClientCLI {
     public static final String zookeeperAddress = "localhost";
     private final Scanner input;
     private Client client = null;
+    Client.Reuniao reuniao = client.new Reuniao();
 
     private final String COMMAND_AJUDA = "ajuda", COMMAND_CHAT = "chat", COMMAND_REUNIAO = "reuniao",
             COMMAND_SAIR = "sair", COMMAND_ENTRAR = "entrar", COMMAND_CRIAR = "criar", COMMAND_LISTAR = "listar",
@@ -67,32 +68,32 @@ public class ClientCLI {
             case COMMAND_LISTAR:
                 String[] reunioes = (client.getAllReunioes());
                 msg("Lista de reuniões ativas no momento:");
-                for (String s: reunioes)
-                    msg(" - "+s);
+                for (String s : reunioes)
+                    msg(" - " + s);
                 break;
 
             case COMMAND_ENTRAR:
-                if(client.canEnterReuniao(command[2]))
-                    reuniaoLoop(client.enterReuniao(command[2]));
-                else msg("Reunião não encontrada");
-            break;
+                if (client.canEnterReuniao(command[2]))
+                    reuniao.reuniaoLoop(client.enterReuniao(command[2]));
+                else
+                    msg("Reunião não encontrada");
+                break;
 
             case COMMAND_CRIAR:
-                if(client.canCreateReuniao(command[2]))
-                    reuniaoLoop(client.createReuniao(command[2]));
-                else msg("Reunião não encontrada");
+                if (client.canCreateReuniao(command[2])) {
+
+                    reuniao.reuniaoLoop(reuniao.createReuniao(command[2]));
+
+                } else
+                    msg("Reunião não encontrada");
                 break;
 
             case COMMAND_AJUDA:
-                ajuda(new String[]{COMMAND_AJUDA, COMMAND_REUNIAO});
+                ajuda(new String[] { COMMAND_AJUDA, COMMAND_REUNIAO });
 
             default:
                 msg("Comando não entendido. Tente \"ajuda reuniao\"");
         }
-    }
-
-    private void reuniaoLoop(Reuniao enterReuniao) {
-        //TODO
     }
 
     private void chat(String[] command) {
@@ -102,51 +103,55 @@ public class ClientCLI {
         switch (command[1]) {
 
             case COMMAND_ENVIAR:
-                if(command.length < 4)
+                if (command.length < 4)
                     msg("Comando necessita de destinatário e mensagem. Tente \"ajuda chat\".");
                 else {
                     String user = command[2];
                     StringBuilder message = new StringBuilder(command[3]);
-                    if(command.length > 4)
-                        for(int i = 4; i < command.length; i++)
-                            message.append(" ").append(command[i]); //desfazer o split
+                    if (command.length > 4)
+                        for (int i = 4; i < command.length; i++)
+                            message.append(" ").append(command[i]); // desfazer o split
 
                     int result = client.sendMessage(user, message.toString());
                     if (result == Client.MESSAGE_SENT)
                         msg("Mensagem enviada");
-                    else if(result == Client.USER_NOT_FOUND)
+                    else if (result == Client.USER_NOT_FOUND)
                         msg("Usuário não existente");
                 }
                 break;
 
             case COMMAND_RECEBER:
-                if(command.length < 3)
+                if (command.length < 3)
                     msg("Necessário informar quantas mensagens receber. Tente \"ajuda chat\".");
                 else {
                     int amount = 0;
                     try {
                         if (command[2].equals("all"))
                             amount = Integer.MAX_VALUE;
-                        else amount = Integer.parseInt(command[2]);
-                    } catch (NumberFormatException ignored){ }
+                        else
+                            amount = Integer.parseInt(command[2]);
+                    } catch (NumberFormatException ignored) {
+                    }
 
                     if (amount <= 0)
                         msg("Quantidade deve ser \"all\" ou um inteiro positivo");
-                    else receberLoop(amount);
+                    else
+                        receberLoop(amount);
                 }
                 break;
 
             case COMMAND_AJUDA:
-                ajuda(new String[]{COMMAND_AJUDA, COMMAND_CHAT});
+                ajuda(new String[] { COMMAND_AJUDA, COMMAND_CHAT });
 
             default:
                 msg("Comando não entendido. Tente \"ajuda chat\".");
         }
     }
 
-    private void receberLoop(final int amount) { // gambiarra com busy-wait para parar quando terminar OU o usuario digitar quit
+    private void receberLoop(final int amount) { // gambiarra com busy-wait para parar quando terminar OU o usuario
+                                                 // digitar quit
         Thread retrieveMessages = new Thread(() -> {
-            for(int i = amount; i > 0; i--) {
+            for (int i = amount; i > 0; i--) {
                 String[] message = client.retrieveMessage();
                 msg("Mensagem de " + message[0] + ":" + message[1]);
             }
@@ -155,7 +160,7 @@ public class ClientCLI {
         Thread stopCommand = new Thread(() -> {
             while (true) {
                 String[] command = input.nextLine().split("[ ]+");
-                if(command[0] == COMMAND_PARAR){
+                if (command[0] == COMMAND_PARAR) {
                     msg("Interrompendo recebimento de mensagens");
                     break;
                 }
@@ -165,11 +170,13 @@ public class ClientCLI {
         msg("Procurando mensagens");
         retrieveMessages.start();
         stopCommand.start();
-        while(true) {
-            try { Thread.sleep(500); }
-            catch (InterruptedException ignored) {}
+        while (true) {
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException ignored) {
+            }
 
-            if(!retrieveMessages.isAlive() || !stopCommand.isAlive()) {
+            if (!retrieveMessages.isAlive() || !stopCommand.isAlive()) {
                 if (stopCommand.isAlive())
                     stopCommand.stop();
                 if (retrieveMessages.isAlive())
