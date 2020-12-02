@@ -6,9 +6,9 @@ public class ClientCLI {
     private final Scanner input;
     private Client client = null;
 
-    private final String COMMAND_AJUDA = "ajuda", COMMAND_LISTAR = "listar", COMMAND_CHAT = "chat",
-            COMMAND_CHATS = "chats", COMMAND_REUNIAO = "reuniao", COMMAND_REUNIOES = "reunioes",
-            COMMAND_ENTRAR = "entrar", COMMAND_SAIR = "sair";
+    private final String COMMAND_AJUDA = "ajuda", COMMAND_CHAT = "chat", COMMAND_REUNIAO = "reuniao",
+            COMMAND_SAIR = "sair", COMMAND_ENTRAR = "entrar", COMMAND_CRIAR = "criar", COMMAND_LISTAR = "listar",
+            COMMAND_ENVIAR = "enviar", COMMAND_RECEBER = "receber", COMMAND_PARAR = "parar";
 
     public ClientCLI(Scanner input) {
         this.input = input;
@@ -35,16 +35,15 @@ public class ClientCLI {
                     ajuda(command);
                     break;
 
-                case COMMAND_LISTAR:
-                    listar(command);
+                case COMMAND_CHAT:
+                    chat(command);
                     break;
 
-                case COMMAND_ENTRAR:
-                    entrar(command);
-                    break;
+                case COMMAND_REUNIAO:
+                    reuniao(command);
 
                 case COMMAND_SAIR:
-                    sair(command);
+                    sair();
                     break;
 
                 default:
@@ -53,95 +52,162 @@ public class ClientCLI {
         }
     }
 
-    private void sair(String[] command) {
+    private void sair() {
         if (yesNoQuestion("Deseja mesmo sair?"))
             client.quit();
         client = null;
     }
 
-    private void entrar(String[] command) {
-        if (command.length < 3)
-            msg("Especifique onde entrar. Tente \"ajuda entrar\"");
+    private void reuniao(String[] command) {
+        if (command.length < 2)
+            msg("Comando não entendido. Tente \"ajuda reuniao\"");
 
         switch (command[1]) {
 
-            case COMMAND_CHAT:
-                /*
-                 * ideia:
-                 * 
-                 * entrarChat(user, idChat);
-                 * 
-                 */
-                break;
-            case COMMAND_CHATS:
-                /*
-                 * ideia:
-                 * 
-                 * listaOpenChats()
-                 */
+            case COMMAND_LISTAR:
+                String[] reunioes = (client.getAllReunioes());
+                msg("Lista de reuniões ativas no momento:");
+                for (String s: reunioes)
+                    msg(" - "+s);
                 break;
 
-            case COMMAND_REUNIAO:
+            case COMMAND_ENTRAR:
+                if(client.canEnterReuniao(command[2]))
+                    reuniaoLoop(client.enterReuniao(command[2]));
+                else msg("Reunião não encontrada");
+            break;
 
-                // TODO
+            case COMMAND_CRIAR:
+                if(client.canCreateReuniao(command[2]))
+                    reuniaoLoop(client.createReuniao(command[2]));
+                else msg("Reunião não encontrada");
                 break;
-            case COMMAND_REUNIOES:
-                // TODO
-                break;
+
+            case COMMAND_AJUDA:
+                ajuda(new String[]{COMMAND_AJUDA, COMMAND_REUNIAO});
 
             default:
-                msg("Comando não entendido. Tente \"ajuda entrar\"");
+                msg("Comando não entendido. Tente \"ajuda reuniao\"");
         }
     }
 
-    private void listar(String[] command) {
+    private void reuniaoLoop(Reuniao enterReuniao) {
+        //TODO
+    }
+
+    private void chat(String[] command) {
         if (command.length < 2)
-            msg("Especifique o que listar. Tente \"ajuda listar\"");
+            msg("Comando não entendido. Tente \"ajuda chat\"");
 
         switch (command[1]) {
 
-            case COMMAND_CHAT:
+            case COMMAND_ENVIAR:
+                if(command.length < 4)
+                    msg("Comando necessita de destinatário e mensagem. Tente \"ajuda chat\".");
+                else {
+                    String user = command[2];
+                    StringBuilder message = new StringBuilder(command[3]);
+                    if(command.length > 4)
+                        for(int i = 4; i < command.length; i++)
+                            message.append(" ").append(command[i]); //desfazer o split
 
-                // TODO
-                break;
-            case COMMAND_CHATS:
-                // TODO
+                    int result = client.sendMessage(user, message.toString());
+                    if (result == Client.MESSAGE_SENT)
+                        msg("Mensagem enviada");
+                    else if(result == Client.USER_NOT_FOUND)
+                        msg("Usuário não existente");
+                }
                 break;
 
-            case COMMAND_REUNIAO:
-                // TODO
+            case COMMAND_RECEBER:
+                if(command.length < 3)
+                    msg("Necessário informar quantas mensagens receber. Tente \"ajuda chat\".");
+                else {
+                    int amount = 0;
+                    try {
+                        if (command[2].equals("all"))
+                            amount = Integer.MAX_VALUE;
+                        else amount = Integer.parseInt(command[2]);
+                    } catch (NumberFormatException ignored){ }
+
+                    if (amount <= 0)
+                        msg("Quantidade deve ser \"all\" ou um inteiro positivo");
+                    else receberLoop(amount);
+                }
                 break;
-            case COMMAND_REUNIOES:
-                // TODO
-                break;
+
+            case COMMAND_AJUDA:
+                ajuda(new String[]{COMMAND_AJUDA, COMMAND_CHAT});
 
             default:
-                msg("Comando não entendido. Tente \"ajuda listar\"");
+                msg("Comando não entendido. Tente \"ajuda chat\".");
         }
+    }
+
+    private void receberLoop(final int amount) { // gambiarra com busy-wait para parar quando terminar OU o usuario digitar quit
+        Thread retrieveMessages = new Thread(() -> {
+            for(int i = amount; i > 0; i--) {
+                String[] message = client.retrieveMessage();
+                msg("Mensagem de " + message[0] + ":" + message[1]);
+            }
+        });
+
+        Thread stopCommand = new Thread(() -> {
+            while (true) {
+                String[] command = input.nextLine().split("[ ]+");
+                if(command[0] == COMMAND_PARAR){
+                    msg("Interrompendo recebimento de mensagens");
+                    break;
+                }
+            }
+        });
+
+        msg("Procurando mensagens");
+        retrieveMessages.start();
+        stopCommand.start();
+        while(true) {
+            try { Thread.sleep(500); }
+            catch (InterruptedException ignored) {}
+
+            if(!retrieveMessages.isAlive() || !stopCommand.isAlive()) {
+                if (stopCommand.isAlive())
+                    stopCommand.stop();
+                if (retrieveMessages.isAlive())
+                    retrieveMessages.stop();
+
+                break;
+            }
+        }
+        msg("Fim do recebimento de mensagens");
     }
 
     private void ajuda(String[] command) {
         if (command.length > 1) {
             switch (command[1]) {
 
-                case COMMAND_ENTRAR:
-                    msg("Para entrar num chat ou numa reunião, informe o id correspondente.");
+                case COMMAND_CHAT:
+                    msg("\"chat enviar USER MSG\": Envia uma mensagem MSG ao usuário USER.");
+                    msg("\"chat receber N|all\": Recupera todas ou as primeiras N mensagens não lidas");
+                    msg("\"chat ajuda\": Igual a \"ajuda chat\".");
                     break;
 
-                case COMMAND_LISTAR:
-                    msg("Para listar um chat ou uma reunião, selecione a opção listar");
+                case COMMAND_REUNIAO:
+                    msg("\"reuniao listar\": Lista todas as reuniões em andamento.");
+                    msg("\"reuniao entrar|criar ID\": Entra ou cria a reunião ID");
+                    msg("\"reuniao ajuda\": Igual a \"ajuda reuniao\".");
                     break;
 
                 case COMMAND_SAIR:
-                    msg("Para sair, selecione a opção sair.");
+                    msg("\"sair\": Sai da sua conta (logoff)");
                     break;
 
                 default:
                     msg("Comando não entendido. Tente somente \"ajuda\" para ver os comandos disponíveis.");
             }
         } else {
-            msg("Para entrar num chat ou numa reunião, selecione a opção com o id correspondente. Para listar um chat ou uma reunião, selecione a opção listar. Para sair, selecione a opção sair.");
-            // TODO printar todas as ajudas.
+            msg("Digite \"ajuda chat\" para saber mais sobre o comando chat");
+            msg("Digite \"ajuda reuniao\" para saber mais sobre o comando reuniao");
+            msg("Digite \"ajuda sair\" para saber mais sobre o comando sair");
         }
     }
 

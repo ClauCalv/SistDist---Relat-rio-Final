@@ -2,6 +2,7 @@ package zkcodes;
 
 import org.apache.zookeeper.KeeperException;
 
+import java.nio.ByteBuffer;
 import java.util.Random;
 
 public class ZookeeperTestesOld {
@@ -36,11 +37,8 @@ public class ZookeeperTestesOld {
         if (args[3].equals("p")) {
             System.out.println("Producer");
             for (i = 0; i < max; i++)
-                try {
-                    q.produce(10 + i);
-                } catch (KeeperException | InterruptedException e) {
-                    e.printStackTrace();
-                }
+                q.produce("element", ByteBuffer.allocate(4).putInt(10 + i).array() );
+
         } else {
             System.out.println("Consumer");
 

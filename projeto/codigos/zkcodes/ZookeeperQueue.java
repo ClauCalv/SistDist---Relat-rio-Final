@@ -19,7 +19,7 @@ public class ZookeeperQueue extends ZookeeperSync {
      * @param address
      * @param name
      */
-    ZookeeperQueue(String address, String name) {
+    public ZookeeperQueue(String address, String name) {
         super(address);
         this.root = name;
         // Create ZK node name
@@ -29,71 +29,58 @@ public class ZookeeperQueue extends ZookeeperSync {
                 if (s == null) {
                     zk.create(root, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
                 }
-            } catch (KeeperException e) {
-                System.out.println("Keeper exception when instantiating queue: " + e.toString());
-            } catch (InterruptedException e) {
-                System.out.println("Interrupted exception");
+            } catch (KeeperException | InterruptedException e) {
+                e.printStackTrace();
             }
         }
     }
 
-    /**
-     * Add element to the queue.
-     *
-     * @param i
-     * @return
-     */
-
-    boolean produce(int i) throws KeeperException, InterruptedException {
-        ByteBuffer b = ByteBuffer.allocate(4);
-        byte[] value;
-
-        // Add child with value i
-        b.putInt(i);
-        value = b.array();
-        zk.create(root + "/element", value, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT_SEQUENTIAL);
-
-        return true;
+    //Modificado para aceitar qualquer dado e não disparar excessão
+    public boolean produce(String elem, byte[] value){
+        try {
+            zk.create(root + "/" + elem, value, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT_SEQUENTIAL);
+            return true;
+        } catch (KeeperException | InterruptedException e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 
 
-    /**
-     * Remove first element from the queue.
-     *
-     * @return
-     * @throws KeeperException
-     * @throws InterruptedException
-     */
-    int consume() throws KeeperException, InterruptedException {
-        int retvalue = -1;
-        Stat stat = null;
+    //Modificado para aceitar qualquer dado e não disparar excessão
+    public byte[] consume(String elem) {
+        byte[] retvalue;
 
         // Get the first element available
         while (true) {
             synchronized (mutex) {
-                List<String> list = zk.getChildren(root, true);
-                if (list.size() == 0) {
-                    System.out.println("Going to wait");
-                    mutex.wait();
-                } else {
-                    int min = Integer.parseInt(list.get(0).substring(7));
-                    System.out.println("List: " + list.toString());
-                    String minString = list.get(0);
-                    for (String s : list) {
-                        Integer tempValue = new Integer(s.substring(7));
-                        //System.out.println("Temp value: " + tempValue);
-                        if (tempValue < min) {
-                            min = tempValue;
-                            minString = s;
+                try {
+                    List<String> list = zk.getChildren(root, true);
+
+                    if (!list.isEmpty()) {
+                        String minString = null;
+                        int min = Integer.MAX_VALUE;
+                        for (String node : list) {
+                            if (node.startsWith(elem)) { // filtra agora só os elems corretos
+                                int nodeValue = Integer.parseInt(node.substring(elem.length())); // e calcula seu tamanho
+                                if (nodeValue < min) {
+                                    min = nodeValue;
+                                    minString = node;
+                                }
+                            }
+                        }
+
+                        if (minString != null) { //podemos ter achado algo que não era do tipo elem
+                            byte[] b = zk.getData(root + "/" + minString, false, null);
+                            zk.delete(root + "/" + minString, 0); // version não deveria ser -1?
+                            return b;
                         }
                     }
-                    System.out.println("Temporary value: " + root + "/" + minString);
-                    byte[] b = zk.getData(root + "/" + minString, false, stat);
-                    //System.out.println("b: " + Arrays.toString(b));
-                    zk.delete(root + "/" + minString, 0);
-                    ByteBuffer buffer = ByteBuffer.wrap(b);
-                    retvalue = buffer.getInt();
-                    return retvalue;
+
+                    System.out.println("Fila vazia, esperando...");
+                    mutex.wait();
+                } catch (KeeperException | InterruptedException e) {
+                    e.printStackTrace();
                 }
             }
         }
