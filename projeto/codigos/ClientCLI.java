@@ -6,29 +6,30 @@ public class ClientCLI {
     private final Scanner input;
     private Client client = null;
 
-    private final String COMMAND_AJUDA = "ajuda", COMMAND_LISTAR = "listar", COMMAND_CHAT = "chat", COMMAND_CHATS = "chats",
-            COMMAND_REUNIAO = "reuniao", COMMAND_REUNIOES = "reunioes", COMMAND_ENTRAR = "entrar", COMMAND_SAIR = "sair";
+    private final String COMMAND_AJUDA = "ajuda", COMMAND_LISTAR = "listar", COMMAND_CHAT = "chat",
+            COMMAND_CHATS = "chats", COMMAND_REUNIAO = "reuniao", COMMAND_REUNIOES = "reunioes",
+            COMMAND_ENTRAR = "entrar", COMMAND_SAIR = "sair";
 
-    public ClientCLI(Scanner input){
+    public ClientCLI(Scanner input) {
         this.input = input;
     }
 
     public static void main(String[] args) {
         Scanner input = new Scanner(System.in);
 
-        if(args.length > 0)
+        if (args.length > 0)
             Client.setup(args[0]);
         new ClientCLI(input).inputLoop();
     }
 
     public void inputLoop() {
-        while (true){
+        while (true) {
 
-            if(client == null)
+            if (client == null)
                 buildClient();
 
             String[] command = input.nextLine().split("[ ]+");
-            switch (command[0]){
+            switch (command[0]) {
 
                 case COMMAND_AJUDA:
                     ajuda(command);
@@ -53,25 +54,39 @@ public class ClientCLI {
     }
 
     private void sair(String[] command) {
-        if(yesNoQuestion("Deseja mesmo sair?"))
+        if (yesNoQuestion("Deseja mesmo sair?"))
             client.quit();
-            client = null;
+        client = null;
     }
 
     private void entrar(String[] command) {
-        if(command.length < 3)
+        if (command.length < 3)
             msg("Especifique onde entrar. Tente \"ajuda entrar\"");
 
-        switch (command[1]){
+        switch (command[1]) {
 
             case COMMAND_CHAT:
+                /*
+                 * ideia:
+                 * 
+                 * entrarChat(user, idChat);
+                 * 
+                 */
+                break;
             case COMMAND_CHATS:
-                //TODO
+                /*
+                 * ideia:
+                 * 
+                 * listaOpenChats()
+                 */
                 break;
 
             case COMMAND_REUNIAO:
+
+                // TODO
+                break;
             case COMMAND_REUNIOES:
-                //TODO
+                // TODO
                 break;
 
             default:
@@ -80,19 +95,24 @@ public class ClientCLI {
     }
 
     private void listar(String[] command) {
-        if(command.length < 2)
+        if (command.length < 2)
             msg("Especifique o que listar. Tente \"ajuda listar\"");
 
-        switch (command[1]){
+        switch (command[1]) {
 
             case COMMAND_CHAT:
+
+                // TODO
+                break;
             case COMMAND_CHATS:
-                //TODO
+                // TODO
                 break;
 
             case COMMAND_REUNIAO:
+                // TODO
+                break;
             case COMMAND_REUNIOES:
-                //TODO
+                // TODO
                 break;
 
             default:
@@ -101,55 +121,56 @@ public class ClientCLI {
     }
 
     private void ajuda(String[] command) {
-        if(command.length > 1){
-            switch (command[1]){
+        if (command.length > 1) {
+            switch (command[1]) {
 
                 case COMMAND_ENTRAR:
-                    //TODO
+                    msg("Para entrar num chat ou numa reunião, informe o id correspondente.");
                     break;
 
                 case COMMAND_LISTAR:
-                    //TODO
+                    msg("Para listar um chat ou uma reunião, selecione a opção listar");
                     break;
 
                 case COMMAND_SAIR:
-                    //TODO
+                    msg("Para sair, selecione a opção sair.");
                     break;
 
                 default:
                     msg("Comando não entendido. Tente somente \"ajuda\" para ver os comandos disponíveis.");
             }
         } else {
-            //TODO printar todas as ajudas.
+            msg("Para entrar num chat ou numa reunião, selecione a opção com o id correspondente. Para listar um chat ou uma reunião, selecione a opção listar. Para sair, selecione a opção sair.");
+            // TODO printar todas as ajudas.
         }
     }
 
     private void buildClient() {
-        while(client == null){
+        while (client == null) {
             msg("Insira o login e a senha");
             String login = input.next();
             String senha = input.next();
             resetInput();
             int status = Client.queryLogin(login, senha);
-            if(status == Client.USER_NOT_FOUND){
-                if(yesNoQuestion("Usuário não encontrado. Criar usuário novo com essas credenciais?")){
+            if (status == Client.USER_NOT_FOUND) {
+                if (yesNoQuestion("Usuário não encontrado. Criar usuário novo com essas credenciais?")) {
                     client = Client.createUser(login, senha);
                 }
-            } else if (status == Client.LOGIN_VALID){
+            } else if (status == Client.LOGIN_VALID) {
                 client = Client.doLogin(login);
-            } else if (status == Client.BAD_PASSWORD){
+            } else if (status == Client.BAD_PASSWORD) {
                 msg("Senha incorreta! Tente novamente");
             }
         }
     }
 
-    private boolean yesNoQuestion(String question){
+    private boolean yesNoQuestion(String question) {
         msg(question + " (S/N)");
-        while(true){
+        while (true) {
             char ans = input.nextLine().charAt(0);
-            if (ans == 's' || ans == 'S'){
+            if (ans == 's' || ans == 'S') {
                 return true;
-            } else if (ans == 'n' || ans == 'N'){
+            } else if (ans == 'n' || ans == 'N') {
                 return false;
             }
             msg("(S/N)");
@@ -157,7 +178,8 @@ public class ClientCLI {
     }
 
     private void resetInput() {
-        if (input.hasNextLine()) input.nextLine(); // não sei se vai precisar mas dá uma dor de cabeça se esquecer
+        if (input.hasNextLine())
+            input.nextLine(); // não sei se vai precisar mas dá uma dor de cabeça se esquecer
     }
 
     private static void msg(String s) {
