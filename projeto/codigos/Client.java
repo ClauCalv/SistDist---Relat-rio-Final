@@ -69,7 +69,7 @@ public class Client {
 
     public Reuniao enterReuniao(String r) {
         // TODO
-        return null;
+        return new Reuniao();
     }
 
     public String[] getAllReunioes() {
@@ -92,9 +92,6 @@ public class Client {
             return enterReuniao(r);
         }
 
-        public void reuniaoLoop(Reuniao enterReuniao) {
-            // TODO
-        }
     }
 
     public int sendMessage(String target, String msg) {

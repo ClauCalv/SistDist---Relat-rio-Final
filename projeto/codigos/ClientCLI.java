@@ -74,7 +74,7 @@ public class ClientCLI {
 
             case COMMAND_ENTRAR:
                 if (client.canEnterReuniao(command[2]))
-                    reuniao.reuniaoLoop(client.enterReuniao(command[2]));
+                    reuniaoLoop(client.enterReuniao(command[2]));
                 else
                     msg("Reunião não encontrada");
                 break;
@@ -82,7 +82,7 @@ public class ClientCLI {
             case COMMAND_CRIAR:
                 if (client.canCreateReuniao(command[2])) {
 
-                    reuniao.reuniaoLoop(reuniao.createReuniao(command[2]));
+                    reuniaoLoop(reuniao.createReuniao(command[2]));
 
                 } else
                     msg("Reunião não encontrada");
@@ -94,6 +94,10 @@ public class ClientCLI {
             default:
                 msg("Comando não entendido. Tente \"ajuda reuniao\"");
         }
+    }
+
+    private void reuniaoLoop(Client.Reuniao enterReuniao) {
+        // TODO
     }
 
     private void chat(String[] command) {
