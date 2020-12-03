@@ -67,7 +67,7 @@ public class Client {
 
     public Reuniao enterReuniao(String r) {
         //TODO
-        return null;
+        return new Reuniao();
     }
 
     public String[] getAllReunioes() {
@@ -113,6 +113,13 @@ public class Client {
         buf.get(msgby, Integer.BYTES + sourceSize, msgby.length);
 
         return new String[]{new String(sourceby), new String(msgby)};
+    }
+
+    public class Reuniao{
+
+        private Reuniao(){
+
+        }
     }
 }
 

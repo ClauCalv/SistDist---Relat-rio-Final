@@ -91,7 +91,7 @@ public class ClientCLI {
         }
     }
 
-    private void reuniaoLoop(Reuniao enterReuniao) {
+    private void reuniaoLoop(Client.Reuniao enterReuniao) {
         //TODO
     }
 
