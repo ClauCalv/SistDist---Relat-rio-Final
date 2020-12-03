@@ -9,129 +9,156 @@ import org.apache.zookeeper.data.Stat;
 import java.util.List;
 
 public class ZookeeperLeader extends ZookeeperSync {
-    String leader;
-    String id; //Id of the leader
-    String pathName;
 
-    /**
-     * Constructor of Leader
-     *
-     * @param address
-     * @param name    Name of the election node
-     * @param leader  Name of the leader node
-     */
-    ZookeeperLeader(String address, String name, String leader, int id) {
+    private static final String ELECTION_PREFIX = "n-";
+    String electionNode;
+    String leaderNode;
+    String id; //Id of the leader
+    String myElection;
+
+    String currentLeader = null;
+
+    private LeaderCallback leaderCallback;
+
+    // Reconstruído para aceitar callbacks
+    ZookeeperLeader(String address, String root, String leaderNode, String electionNode, String user) {
         super(address);
-        this.root = name;
-        this.leader = leader;
-        this.id = Integer.toString(id);
+        this.root = root;
+        this.leaderNode = root + "/" + leaderNode;
+        this.electionNode = root + "/" + electionNode;
+        this.id = user;
+
         // Create ZK node name
         if (zk != null) {
             try {
+
                 //Create election znode
-                Stat s1 = zk.exists(root, false);
-                if (s1 == null) {
-                    zk.create(root, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-                }
+                Stat s1 = zk.exists(electionNode, false);
+                if (s1 == null)
+                    zk.create(electionNode, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+
                 //Checking for a leader
-                Stat s2 = zk.exists(leader, false);
+                Stat s2 = zk.exists(leaderNode, true); // coloquei uma watch aqui pra saber quando trocou de líder
                 if (s2 != null) {
-                    byte[] idLeader = zk.getData(leader, false, s2);
-                    System.out.println("Current leader with id: " + new String(idLeader));
+                    byte[] idLeader = zk.getData(leaderNode, false, s2);
+                    currentLeader = new String(idLeader);
                 }
 
-            } catch (KeeperException e) {
-                System.out.println("Keeper exception when instantiating queue: " + e.toString());
-            } catch (InterruptedException e) {
-                System.out.println("Interrupted exception");
+            } catch (InterruptedException | KeeperException e) {
+                e.printStackTrace();
             }
         }
     }
 
-    boolean elect() throws KeeperException, InterruptedException {
-        this.pathName = zk.create(root + "/n-", new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL);
-        System.out.println("My path name is: " + pathName + " and my id is: " + id + "!");
-        return check();
+    public String getCurrentLeader() {
+        return currentLeader;
     }
 
-    boolean check() throws KeeperException, InterruptedException {
-        Integer suffix = new Integer(pathName.substring(12));
+    public void setLeaderCallback(LeaderCallback leaderCallback) {
+        this.leaderCallback = leaderCallback;
+    }
+
+    public boolean elect() {
+        try {
+            String fullElectionPath = zk.create(electionNode + "/" + ELECTION_PREFIX, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL);
+            this.myElection = fullElectionPath.substring(fullElectionPath.lastIndexOf('/') + 1); // Só o prefixo+sufixo
+            return check();
+        } catch (KeeperException | InterruptedException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean check()  {
+        Integer suffix = Integer.valueOf(myElection.substring(ELECTION_PREFIX.length()));
         while (true) {
-            List<String> list = zk.getChildren(root, false);
-            Integer min = new Integer(list.get(0).substring(5));
-            System.out.println("List: " + list.toString());
-            String minString = list.get(0);
-            for (String s : list) {
-                Integer tempValue = new Integer(s.substring(5));
-                //System.out.println("Temp value: " + tempValue);
-                if (tempValue < min) {
-                    min = tempValue;
-                    minString = s;
+            try{
+
+                List<String> list = zk.getChildren(electionNode, false);
+
+                int min = Integer.parseInt(list.get(0).substring(ELECTION_PREFIX.length()));
+                String minString = list.get(0);
+                for (String s : list) {
+                    int tempValue = Integer.parseInt(s.substring(ELECTION_PREFIX.length()));
+                    if (tempValue < min) {
+                        min = tempValue;
+                        minString = s;
+                    }
                 }
-            }
-            System.out.println("Suffix: " + suffix + ", min: " + min);
-            if (suffix.equals(min)) {
-                this.leader();
-                return true;
-            }
-            Integer max = min;
-            String maxString = minString;
-            for (String s : list) {
-                Integer tempValue = new Integer(s.substring(5));
-                //System.out.println("Temp value: " + tempValue);
-                if (tempValue > max && tempValue < suffix) {
-                    max = tempValue;
-                    maxString = s;
+
+                if (suffix.equals(min)) {
+                    this.leader();
+                    return true;
                 }
-            }
-            //Exists with watch
-            Stat s = zk.exists(root + "/" + maxString, this);
-            System.out.println("Watching " + root + "/" + maxString);
-            //Step 5
-            if (s != null) {
-                //Wait for notification
-                break;
+
+                int max = min;
+                String maxString = minString;
+                for (String s : list) {
+                    int tempValue = Integer.parseInt(s.substring(ELECTION_PREFIX.length()));
+                    if (tempValue > max && tempValue < suffix) {
+                        max = tempValue;
+                        maxString = s;
+                    }
+                }
+
+                Stat s = zk.exists(electionNode + "/" + maxString, this); //Exists with watch
+                if (s != null)
+                    break;
+
+            } catch (KeeperException | InterruptedException e) {
+                e.printStackTrace();
             }
         }
-        System.out.println(pathName + " is waiting for a notification!");
-        return false;
 
+        return false;
     }
 
     synchronized public void process(WatchedEvent event) {
         synchronized (mutex) {
-            if (event.getType() == Event.EventType.NodeDeleted) {
-                try {
-                    boolean success = check();
-                    if (success) {
-                        compute();
+            try{
+
+                if (event.getPath().equals(leaderNode)){ // Se alguém alterou a leaderNode
+                    Stat s2 = zk.exists(leaderNode, true); // coloquei uma watch aqui pra saber quando trocou de líder
+                    if (s2 != null) {
+                        byte[] idLeader = zk.getData(leaderNode, false, s2);
+                        currentLeader = new String(idLeader);
+
+                        if (leaderCallback != null)
+                            leaderCallback.onNewLeaderFound(currentLeader);
                     }
-                } catch (Exception e) {
-                    e.printStackTrace();
+                    if (leaderCallback != null)
+                        leaderCallback.onNoNewLeaderFound();
+
+                } else if (event.getType() == Event.EventType.NodeDeleted) { // Se deletaram algo e não foi a leaderNode
+                    if (check())
+                        leaderCallback.onBecomeLeader();
+
                 }
+            } catch (KeeperException | InterruptedException e) {
+                e.printStackTrace();
             }
         }
     }
 
-    void leader() throws KeeperException, InterruptedException {
-        System.out.println("Become a leader: " + id + "!");
-        //Create leader znode
-        Stat s2 = zk.exists(leader, false);
-        if (s2 == null) {
-            zk.create(leader, id.getBytes(), Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
-        } else {
-            zk.setData(leader, id.getBytes(), 0);
+    private void leader()  {
+        try { //Create leader znode
+
+            Stat s2 = zk.exists(leaderNode, false);
+            if (s2 == null)
+                zk.create(leaderNode, id.getBytes(), Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
+            else zk.setData(leaderNode, id.getBytes(), 0);
+
+        } catch (KeeperException | InterruptedException e) {
+            e.printStackTrace();
         }
     }
 
-    void compute() {
-        System.out.println("I will die after 10 seconds!");
-        try {
-            new Thread().sleep(10000);
-            System.out.println("Process " + id + " died!");
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        System.exit(0);
+    public interface LeaderCallback {
+
+        void onNewLeaderFound(String currentLeader);
+
+        void onNoNewLeaderFound();
+
+        void onBecomeLeader();
     }
 }

@@ -95,7 +95,8 @@ public class Client {
         byte [] targetbs = target.getBytes();
         byte[] msgbs = msg.getBytes();
         ByteArrayOutputStream baos = new ByteArrayOutputStream(Integer.BYTES + targetbs.length + msgbs.length);
-        baos.write(ByteBuffer.allocate(Integer.BYTES).putInt(targetbs.length).array(), 0, Integer.BYTES); //Não acredito que seja tão foda levar um int a um byte[4].
+        baos.write(ByteBuffer.allocate(Integer.BYTES).putInt(targetbs.length).array(), 0, Integer.BYTES);
+        //Não acredito que seja tão foda levar um int a um byte[4].
         baos.write(targetbs, 0, targetbs.length);
         baos.write(msgbs, 0, Math.max(msgbs.length, MAX_MESSAGE_SIZE));
         byte[] message = baos.toByteArray();
@@ -117,8 +118,10 @@ public class Client {
 
     public class Reuniao{
 
-        private Reuniao(){
+        private final String reuniaoRoot;
 
+        private Reuniao(String reuniaoID){
+            reuniaoRoot = reunioesRoot + "/" + reuniaoID;
         }
     }
 }

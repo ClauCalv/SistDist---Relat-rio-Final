@@ -41,16 +41,9 @@ public class ZookeeperTestesOld {
 
         } else {
             System.out.println("Consumer");
-
             for (i = 0; i < max; i++) {
-                try {
-                    int r = q.consume();
-                    System.out.println("Item: " + r);
-                } catch (KeeperException e) {
-                    i--;
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+                int r = ByteBuffer.wrap(q.consume("element")).getInt();
+                System.out.println("Item: " + r);
             }
         }
     }
@@ -84,8 +77,8 @@ public class ZookeeperTestesOld {
         System.out.println("Left barrier");
     }
 
-    public static void lockTest(String args[]) {
-        ZookeeperLock lock = new ZookeeperLock(args[1], "/lock", new Long(args[2]));
+    public static void lockTest(String[] args) {
+        ZookeeperLock lock = new ZookeeperLock(args[1], "/lock", Long.parseLong(args[2]));
         try {
             boolean success = lock.lock();
             if (success) {
@@ -100,22 +93,47 @@ public class ZookeeperTestesOld {
         }
     }
 
-    public static void leaderElection(String args[]) {
+    public static void leaderElection(String[] args) {
         // Generate random integer
         Random rand = new Random();
         int r = rand.nextInt(1000000);
-        ZookeeperLeader leader = new ZookeeperLeader(args[0], "/election", "/leader", r);
-        try {
-            boolean success = leader.elect();
-            if (success) {
-                leader.compute();
-            } else {
-                while (true) {
-                    //Waiting for a notification
-                }
+        ZookeeperLeader leader = new ZookeeperLeader(args[0], "/", "/election", "/leader", ""+r);
+        boolean success = leader.elect();
+        if (success) {
+            System.out.println("I will die after 10 seconds!");
+            try {
+                Thread.sleep(10000);
+                System.out.println("Process " + r + " died!");
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
-        } catch (KeeperException | InterruptedException e) {
-            e.printStackTrace();
+            System.exit(0);
+        } else {
+            leader.setLeaderCallback(new ZookeeperLeader.LeaderCallback() {
+                @Override
+                public void onNewLeaderFound(String currentLeader) {
+                    System.out.println("New leader is "+currentLeader);
+                }
+
+                @Override
+                public void onNoNewLeaderFound() {
+                    System.out.println("Something weird happened");
+                }
+
+                @Override
+                public void onBecomeLeader() {
+                    System.out.println("I am the new leader! Computing...");
+                    System.out.println("I will die after 10 seconds!");
+                    try {
+                        Thread.sleep(10000);
+                        System.out.println("Process " + r + " died!");
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    System.exit(0);
+                }
+            });
         }
+
     }
 }
