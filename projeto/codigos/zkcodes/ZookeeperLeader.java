@@ -16,12 +16,12 @@ public class ZookeeperLeader extends ZookeeperSync {
     String id; //Id of the leader
     String myElection;
 
-    String currentLeader = null;
-
+    private String currentLeader = null;
     private LeaderCallback leaderCallback;
+    private boolean isLeader = false;
 
     // Reconstruído para aceitar callbacks
-    ZookeeperLeader(String address, String root, String leaderNode, String electionNode, String user) {
+    public ZookeeperLeader(String address, String root, String leaderNode, String electionNode, String user) {
         super(address);
         this.root = root;
         this.leaderNode = root + "/" + leaderNode;
@@ -38,7 +38,7 @@ public class ZookeeperLeader extends ZookeeperSync {
                     zk.create(electionNode, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 
                 //Checking for a leader
-                Stat s2 = zk.exists(leaderNode, true); // coloquei uma watch aqui pra saber quando trocou de líder
+                Stat s2 = zk.exists(leaderNode, this); // coloquei uma watch aqui pra saber quando trocou de líder
                 if (s2 != null) {
                     byte[] idLeader = zk.getData(leaderNode, false, s2);
                     currentLeader = new String(idLeader);
@@ -69,7 +69,22 @@ public class ZookeeperLeader extends ZookeeperSync {
         }
     }
 
-    public boolean check()  {
+    public void exit() {
+        try {
+            zk.delete(electionNode + "/" + myElection, 0);
+            if(isLeader)
+                zk.delete(leaderNode, 0);
+        } catch (KeeperException | InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public boolean isLeader(){
+        return isLeader;
+    }
+
+    private boolean check()  {
+
         Integer suffix = Integer.valueOf(myElection.substring(ELECTION_PREFIX.length()));
         while (true) {
             try{
@@ -118,7 +133,7 @@ public class ZookeeperLeader extends ZookeeperSync {
             try{
 
                 if (event.getPath().equals(leaderNode)){ // Se alguém alterou a leaderNode
-                    Stat s2 = zk.exists(leaderNode, true); // coloquei uma watch aqui pra saber quando trocou de líder
+                    Stat s2 = zk.exists(leaderNode, this); // coloquei uma watch aqui pra saber quando trocou de líder
                     if (s2 != null) {
                         byte[] idLeader = zk.getData(leaderNode, false, s2);
                         currentLeader = new String(idLeader);
@@ -142,6 +157,8 @@ public class ZookeeperLeader extends ZookeeperSync {
 
     private void leader()  {
         try { //Create leader znode
+
+            isLeader = true;
 
             Stat s2 = zk.exists(leaderNode, false);
             if (s2 == null)

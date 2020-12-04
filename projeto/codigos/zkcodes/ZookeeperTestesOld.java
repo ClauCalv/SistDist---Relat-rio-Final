@@ -13,7 +13,8 @@ public class ZookeeperTestesOld {
                 queueTest(args);
                 break;
             case "barrier":
-                barrierTest(args);
+                //barrierTest(args);
+                System.err.println("Barrier Test is disabled for now");
                 break;
             case "lock":
                 lockTest(args);
@@ -48,34 +49,28 @@ public class ZookeeperTestesOld {
         }
     }
 
-    public static void barrierTest(String[] args) {
-        ZookeeperBarrier b = new ZookeeperBarrier(args[1], "/b1", Integer.parseInt(args[2]));
-        try {
-            boolean flag = b.enter();
-            System.out.println("Entered barrier: " + args[2]);
-            if (!flag) System.out.println("Error when entering the barrier");
-        } catch (KeeperException | InterruptedException ignored) {
-
-        }
-
-        // Generate random integer
-        Random rand = new Random();
-        int r = rand.nextInt(100);
-        // Loop for rand iterations
-        for (int i = 0; i < r; i++) {
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException ignored) {
-
-            }
-        }
-        try {
-            b.leave();
-        } catch (KeeperException | InterruptedException ignored) {
-
-        }
-        System.out.println("Left barrier");
-    }
+    // ZookeeperBarrierLock foi totalmente reconstruído, o teste antigo do professor teria que ser repensado.
+//    public static void barrierTest(String[] args) {
+//        ZookeeperBarrierLock b = new ZookeeperBarrierLock(args[1], "/b1", "lock");
+//
+//        boolean flag = b.enter();
+//        System.out.println("Entered barrier: " + args[2]);
+//        if (!flag) System.out.println("Error when entering the barrier");
+//
+//        // Generate random integer
+//        Random rand = new Random();
+//        int r = rand.nextInt(100);
+//        // Loop for rand iterations
+//        for (int i = 0; i < r; i++) {
+//            try {
+//                Thread.sleep(100);
+//            } catch (InterruptedException ignored) {
+//
+//            }
+//        }
+//        b.leave();
+//        System.out.println("Left barrier");
+//    }
 
     public static void lockTest(String[] args) {
         ZookeeperLock lock = new ZookeeperLock(args[1], "/lock", Long.parseLong(args[2]));

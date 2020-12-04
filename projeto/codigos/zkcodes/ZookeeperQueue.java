@@ -79,8 +79,10 @@ public class ZookeeperQueue extends ZookeeperSync {
 
                     System.out.println("Fila vazia, esperando...");
                     mutex.wait();
-                } catch (KeeperException | InterruptedException e) {
+                } catch (KeeperException e){
                     e.printStackTrace();
+                } catch (InterruptedException e) {
+                    return null; // SUPER IMPORTANTE porque queremos poder parar de procurar por mensagens.
                 }
             }
         }

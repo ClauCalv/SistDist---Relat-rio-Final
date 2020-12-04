@@ -1,5 +1,7 @@
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.server.ByteBufferOutputStream;
+import zkcodes.ZookeeperBarrierLock;
+import zkcodes.ZookeeperLeader;
 import zkcodes.ZookeeperQueue;
 import zkcodes.ZookeeperSimple;
 
@@ -66,8 +68,7 @@ public class Client {
     }
 
     public Reuniao enterReuniao(String r) {
-        //TODO
-        return new Reuniao();
+        return new Reuniao(r);
     }
 
     public String[] getAllReunioes() {
@@ -81,7 +82,8 @@ public class Client {
     }
 
     public Reuniao createReuniao(String r) {
-        //TODO
+        ZookeeperSimple reuniao = new ZookeeperSimple(address, reunioesRoot);
+        reuniao.createEmpty(r, false);
         return enterReuniao(r);
     }
 
@@ -107,6 +109,9 @@ public class Client {
     public String[] retrieveMessage() {
         ZookeeperQueue messageQueue = new ZookeeperQueue(address, chatsRoot + "/" + username);
         byte[] message = messageQueue.consume(MESSAGE_PREFIX);
+        if(message == null) //thread interrompida
+            return null;
+
         ByteBuffer buf = ByteBuffer.wrap(message);
         int sourceSize = buf.getInt();
         byte[] sourceby = new byte[sourceSize], msgby = new byte[message.length - sourceSize - Integer.BYTES];
@@ -118,10 +123,59 @@ public class Client {
 
     public class Reuniao{
 
+        private static final String ELECTION_NODE = "election", LEADER_NODE = "leader", LOCK_NODE = "lock";
+
         private final String reuniaoRoot;
+        private final ZookeeperLeader leader;
+        private final ZookeeperBarrierLock barrier;
+        private boolean hasElected = false;
+        private boolean hasLeft = false;
 
         private Reuniao(String reuniaoID){
             reuniaoRoot = reunioesRoot + "/" + reuniaoID;
+
+            leader = new ZookeeperLeader(address, reuniaoRoot, ELECTION_NODE, LEADER_NODE, username);
+            barrier = new ZookeeperBarrierLock(address, reuniaoRoot, LOCK_NODE);
+        }
+
+        public void setLeaderCallback(ZookeeperLeader.LeaderCallback cb){
+            leader.setLeaderCallback(cb);
+        }
+
+        public boolean checkElection(){
+            if (!hasElected){
+                hasElected = true;
+                return leader.elect();
+            } else return leader.isLeader();
+        }
+
+        public String getCurrentLeader() {
+            return leader.getCurrentLeader();
+        }
+
+        public void startPresentation(){
+            barrier.lock();
+        }
+
+        public void stopPresentation(){
+            barrier.unlock();
+        }
+
+        public boolean waitPresentation(){
+            return barrier.enter();
+        }
+
+        public boolean watchPresentation(){
+            return barrier.leave();
+        }
+
+        public void leave() {
+            leader.exit();
+            hasLeft = true;
+        }
+
+        public boolean hasLeft(){
+            return hasLeft;
         }
     }
 }

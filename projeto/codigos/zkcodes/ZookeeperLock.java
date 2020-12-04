@@ -8,6 +8,7 @@ import org.apache.zookeeper.data.Stat;
 
 import java.util.List;
 
+/* Não foi usada no projeto, somente para os testes. Logo, não foi trabalhada por mim e está igual a do professor. */
 public class ZookeeperLock extends ZookeeperSync {
     long wait;
     String pathName;
