@@ -381,6 +381,7 @@ public class ClientCLI {
                 msg("Senha incorreta! Tente novamente");
             }
         }
+        msg("Bem-vindo, "+client.username);
     }
 
     private boolean yesNoQuestion(String question) throws IOException {

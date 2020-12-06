@@ -20,7 +20,7 @@ public class Client {
     private static final int MAX_MESSAGE_SIZE = Integer.MAX_VALUE; // por enquanto o máximo é infinito
     private static final String MESSAGE_PREFIX = "msg";
 
-    private final String username;
+    public final String username;
 
     private Client(String username) {
         this.username = username;
@@ -52,6 +52,9 @@ public class Client {
         byte[] senhaNova = senha.getBytes(); // Se usássemos alguma criptografia faríamos aqui
 
         users.createWithData(login, senhaNova);
+
+        ZookeeperSimple chats = new ZookeeperSimple(address, chatsRoot);
+        chats.createEmpty(login, false);
         return doLogin(login);
     }
 

@@ -80,7 +80,7 @@ public class ZookeeperSimple extends ZookeeperSync {
         if (zk != null) {
             try {
                 Stat stat = zk.exists(root + "/" + elem, false);
-                return stat == null;
+                return stat != null;
             } catch (KeeperException | InterruptedException e) {
                 e.printStackTrace();
             }
