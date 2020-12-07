@@ -35,12 +35,18 @@
 
 \subsubsection{1.7 - Reinicie a CLI e liste novamente os filhos do sistema de arquivo. O que aconteceu?}
 \addcontentsline{toc}{subsection}{1.7 Reinicie a CLI e liste novamente os filhos do sistema de arquivo}
+Ao reiniciar a CLI, os filhos do sistema de arquivos é zerada.
+\newline
 
+\begin{center}
 \includegraphics[width=20cm]{pratica3/prints/roteiro 1.7.PNG}
+\end{center}
 
 \subsubsection{1.8 - Crie um novo znode efêmero: create -e /mcta025/ex1/ephemeral1 data. Então, crie um filho para o znode que acabou de ser criado: create /mcta025/ex1/ephemeral1/child data. O que aconteceu?}
 \addcontentsline{toc}{subsection}{1.8  Tente criar um filho de um znode efêmero}
 
+Znodes efêmeros não podem ter znodes filhos.
+\newline
 \includegraphics{pratica3/prints/roteiro 1.8.PNG}
 
 \subsection*{2. Sequential suffix}
@@ -55,7 +61,8 @@
 /mcta025/ex2/child data. Repita o comando várias vezes. Qual o
 comprimento do sufixo?}
 \addcontentsline{toc}{subsection}{2.2  Crie znodes sequenciais}
-
+O comprimento do sufixo é de 10 caracteres.
+\newline
 \includegraphics{pratica3/prints/roteiro 2.2.PNG}
 
 \subsubsection{2.3 - Crie znodes sequenciais efêmeros: create -s -e
@@ -71,17 +78,21 @@ comprimento do sufixo?}
 
 \subsubsection{2.5 - Crie mais alguns znodes sequenciais. Como fica a numeração deles?}
 \addcontentsline{toc}{subsection}{2.5  Crie mais alguns znodes sequenciais}
-
+A numeração permanece incremental, independente dos znodes que foram deletados.
+\newline
 \includegraphics{pratica3/prints/roteiro 2.5.PNG}
 
 \subsubsection{2.6 - Crie znodes sequenciais com outro prefixo: create -s
 /mcta025/ex2/son data. Como fica a numeração deles?}
 \addcontentsline{toc}{subsection}{2.6  Crie znodes sequenciais com outro prefixo}
-
+A numeração permanece incremental, independente do prefixo.
+\newline
 \includegraphics{pratica3/prints/roteiro 2.6.PNG}
 
 \subsubsection{2.7 - Crie outros znodes sequenciais em /mcta025. A numeração (isto é, o escopo) está relacionada com a numeração anterior?}
 \addcontentsline{toc}{subsection}{2.7 Crie outros znodes sequenciais e correlacione com a numeração anterior}
+Não. Por estar dentro de um escopo diferente, a numeração muda.
+\newline
 
 \includegraphics{pratica3/prints/roteiro 2.7.PNG}
 
