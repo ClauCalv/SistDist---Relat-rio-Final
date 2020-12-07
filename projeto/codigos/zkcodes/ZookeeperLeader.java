@@ -33,14 +33,14 @@ public class ZookeeperLeader extends ZookeeperSync {
             try {
 
                 //Create election znode
-                Stat s1 = zk.exists(electionNode, false);
+                Stat s1 = zk.exists(this.electionNode, false);
                 if (s1 == null)
-                    zk.create(electionNode, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+                    zk.create(this.electionNode, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 
                 //Checking for a leader
-                Stat s2 = zk.exists(leaderNode, this); // coloquei uma watch aqui pra saber quando trocou de líder
+                Stat s2 = zk.exists(this.leaderNode, this); // coloquei uma watch aqui pra saber quando trocou de líder
                 if (s2 != null) {
-                    byte[] idLeader = zk.getData(leaderNode, false, s2);
+                    byte[] idLeader = zk.getData(this.leaderNode, false, s2);
                     currentLeader = new String(idLeader);
                 }
 
@@ -140,8 +140,7 @@ public class ZookeeperLeader extends ZookeeperSync {
 
                         if (leaderCallback != null)
                             leaderCallback.onNewLeaderFound(currentLeader);
-                    }
-                    if (leaderCallback != null)
+                    } else if (leaderCallback != null)
                         leaderCallback.onNoNewLeaderFound();
 
                 } else if (event.getType() == Event.EventType.NodeDeleted) { // Se deletaram algo e não foi a leaderNode

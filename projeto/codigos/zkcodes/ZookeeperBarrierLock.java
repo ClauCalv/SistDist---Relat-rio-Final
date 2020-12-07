@@ -47,11 +47,11 @@ public class ZookeeperBarrierLock extends ZookeeperSync {
         }
     }
 
-    private boolean isLocked() {
+    private boolean isLocked() throws InterruptedException {
         try {
             Stat s = zk.exists(root + "/" + lock, this);
             return s == null;
-        } catch (KeeperException | InterruptedException e) {
+        } catch (KeeperException e) {
             e.printStackTrace();
         }
         return false;

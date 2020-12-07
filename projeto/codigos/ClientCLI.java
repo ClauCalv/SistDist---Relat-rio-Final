@@ -94,11 +94,9 @@ public class ClientCLI {
 
             case COMMAND_CRIAR:
                 if (client.canCreateReuniao(command[2])) {
-
                     reuniaoLoop(client.createReuniao(command[2]));
-
                 } else
-                    msg("Reunião não encontrada");
+                    msg("Reunião já existe!");
                 break;
 
             case COMMAND_AJUDA:
@@ -127,7 +125,7 @@ public class ClientCLI {
 
             @Override
             public void onNoNewLeaderFound() {
-                msg("Algo deu errado. Estamos sem apresentadores?");
+                msg("Estamos sem apresentadores no momento.");
             }
 
             @Override
@@ -151,8 +149,10 @@ public class ClientCLI {
                                 if(yesNoQuestion("Gostaria mesmo de sair?"))
                                     if(isCurrentlyLeader){
                                         reuniao.stopPresentation();
+                                        reuniao.setLeaderCallback(null);
                                         reuniao.leave();
                                     } else {
+                                        reuniao.setLeaderCallback(null);
                                         reuniao.leave();
                                         t2.interrupt();
                                     }
@@ -171,15 +171,16 @@ public class ClientCLI {
 
                             case COMMAND_PARAR:
                                 if(isCurrentlyLeader){
-                                    reuniao.stopPresentation();
-                                    msg("Encerrando a apresentação. Você ainda pode apresentar novamente.");
+                                    if(reuniao.stopPresentation())
+                                        msg("Encerrando a apresentação. Você ainda pode apresentar novamente.");
                                 } else {
                                     msg("Somente o apresentador pode iniciar ou encerrar uma transmissão.");
                                 }
                                 break;
 
                             default:
-                                msg("Comando não entendido. Digite \"parar\" para interromper a busca por mensagens.");
+                                msg("Comando não entendido.");
+                                msg("Digite \"sair\" para sair da reunião. Digite \"transmitir\" para iniciar a apresentação");
                         }
 
                     }
@@ -201,6 +202,8 @@ public class ClientCLI {
                 if(isCurrentlyLeader)
                     return;
 
+                String leader = reuniao.getCurrentLeader();
+
                 //msg("Usuário "+currentLeader+" é o novo apresentador da reunião."); //Dito pelo callback
                 msg("Esperando a apresentação começar. Digite \"sair\" para sair da reunião");
                 if(reuniao.waitPresentation()){ // entrou na barreira
@@ -211,12 +214,16 @@ public class ClientCLI {
                         msg("A apresentação terminou. Aguardando outra apresentação ...");
                     } else { //interrompido enquanto tentava sair da barreira, ou seja, outro líder foi eleito enquanto
                             // transmitia (ele caiu, pq "sair" encerra a transmissão primeiro. Como a trava é efêmera,
-                            // nem sei se isso vai chegar a ser disparado ou se vai dar como encerrado antes.
-                        msg("A apresentação caiu! Esperando o próximo apresentador ...");
+                            // nem sei se isso vai chegar a ser disparado ou se vai dar como encerrado antes de cair.
+                        if(!reuniao.hasLeft()) // Ou eu que saí, aí ignora
+                            msg("A apresentação caiu! Esperando o próximo apresentador ...");
                     }
-                } else { //interrompido enquanto tentava entrar na barreira. O líder pode ter saído ou caído nesse caso.
-                        // a trava nunca chegou a ser levantada, então tenho certeza que a interrupção disparou.
-                    msg("O apresentador saiu sem apresentar! Esperando o próximo apresentador ...");
+//                    não ta funcionando como deveria, só ta atrapalhando
+//                } else if (!leader.equals(reuniao.getCurrentLeader())) {
+//                        //interrompido enquanto tentava entrar na barreira. O líder pode ter saído ou caído nesse caso.
+//                        // a trava nunca chegou a ser levantada, então tenho certeza que a interrupção disparou.
+//                    if(!reuniao.hasLeft()) // Ou eu que saí, aí ignora
+//                        msg("O apresentador saiu sem apresentar! Esperando o próximo apresentador ...");
                 }
             }
         });
@@ -297,7 +304,7 @@ public class ClientCLI {
                 if(message == null)// thread interrompida
                     break;
 
-                msg("Mensagem de " + message[0] + ":" + message[1]);
+                msg("Mensagem de " + message[0] + ": " + message[1]);
             }
             if(!t2.isInterrupted()) t2.interrupt();
         });
@@ -320,6 +327,7 @@ public class ClientCLI {
                     e.printStackTrace();
                 }
             }
+            if(!t1.isInterrupted()) t1.interrupt();
         });
 
         msg("Procurando mensagens.");

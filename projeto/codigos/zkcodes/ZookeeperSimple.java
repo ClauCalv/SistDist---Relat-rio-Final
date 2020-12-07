@@ -68,7 +68,7 @@ public class ZookeeperSimple extends ZookeeperSync {
         if (zk != null) {
             try {
                 List<String> children = zk.getChildren(root, false);
-                return children.isEmpty() ? null : (String[]) children.toArray();
+                return children.isEmpty() ? null : children.toArray(new String[0]); //casting malfeito maldito
             } catch (KeeperException | InterruptedException e) {
                 e.printStackTrace();
             }
@@ -88,7 +88,7 @@ public class ZookeeperSimple extends ZookeeperSync {
         return false;
     }
 
-    public boolean delete(String elem) {
+    public void delete(String elem) {
         if (zk != null) {
             try {
                 zk.delete(root + "/" + elem, -1);
@@ -96,6 +96,5 @@ public class ZookeeperSimple extends ZookeeperSync {
                 e.printStackTrace();
             }
         }
-        return false;
     }
 }

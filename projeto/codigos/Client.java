@@ -1,5 +1,3 @@
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.server.ByteBufferOutputStream;
 import zkcodes.ZookeeperBarrierLock;
 import zkcodes.ZookeeperLeader;
 import zkcodes.ZookeeperQueue;
@@ -97,13 +95,15 @@ public class Client {
             return USER_NOT_FOUND;
 
         ZookeeperQueue messageQueue = new ZookeeperQueue(address, chatsRoot + "/" + target);
-        byte [] targetbs = target.getBytes();
+        byte [] sourcebs = username.getBytes();
         byte[] msgbs = msg.getBytes();
-        ByteArrayOutputStream baos = new ByteArrayOutputStream(Integer.BYTES + targetbs.length + msgbs.length);
-        baos.write(ByteBuffer.allocate(Integer.BYTES).putInt(targetbs.length).array(), 0, Integer.BYTES);
+//        System.out.println("DEBUG: sourcebs = "+ Arrays.toString(sourcebs));
+//        System.out.println("DEBUG: msgbs = "+ Arrays.toString(msgbs));
+        ByteArrayOutputStream baos = new ByteArrayOutputStream(Integer.BYTES + sourcebs.length + msgbs.length);
+        baos.write(ByteBuffer.allocate(Integer.BYTES).putInt(sourcebs.length).array(), 0, Integer.BYTES);
         //Não acredito que seja tão foda levar um int a um byte[4].
-        baos.write(targetbs, 0, targetbs.length);
-        baos.write(msgbs, 0, Math.max(msgbs.length, MAX_MESSAGE_SIZE));
+        baos.write(sourcebs, 0, sourcebs.length);
+        baos.write(msgbs, 0, Math.min(msgbs.length, MAX_MESSAGE_SIZE));
         byte[] message = baos.toByteArray();
 
         return messageQueue.produce(MESSAGE_PREFIX, message) ? MESSAGE_SENT : WEIRD_ERROR;
@@ -117,11 +117,15 @@ public class Client {
 
         ByteBuffer buf = ByteBuffer.wrap(message);
         int sourceSize = buf.getInt();
-        byte[] sourceby = new byte[sourceSize], msgby = new byte[message.length - sourceSize - Integer.BYTES];
-        buf.get(sourceby, Integer.BYTES, sourceSize);
-        buf.get(msgby, Integer.BYTES + sourceSize, msgby.length);
+//        System.out.println("DEBUG: Sourcesize = "+sourceSize);
+//        System.out.println("DEBUG: MessageRaw = "+ Arrays.toString(buf.array()));
+        byte[] sourcebs = new byte[sourceSize], msgbs = new byte[message.length - sourceSize - Integer.BYTES];
+        buf.get(sourcebs, 0, sourceSize);
+        buf.get(msgbs, 0, msgbs.length);
+//        System.out.println("DEBUG: sourceby = "+ Arrays.toString(sourceby));
+//        System.out.println("DEBUG: msgby = "+ Arrays.toString(msgby));
 
-        return new String[]{new String(sourceby), new String(msgby)};
+        return new String[]{new String(sourcebs), new String(msgbs)};
     }
 
     public class Reuniao{
@@ -131,12 +135,13 @@ public class Client {
         private final String reuniaoRoot;
         private final ZookeeperLeader leader;
         private final ZookeeperBarrierLock barrier;
+        private boolean isPresenting = false;
         private boolean hasElected = false;
         private boolean hasLeft = false;
 
         private Reuniao(String reuniaoID){
             reuniaoRoot = reunioesRoot + "/" + reuniaoID;
-
+//            System.out.println("DEBUG: reuniaoRoot = "+reuniaoRoot);
             leader = new ZookeeperLeader(address, reuniaoRoot, ELECTION_NODE, LEADER_NODE, username);
             barrier = new ZookeeperBarrierLock(address, reuniaoRoot, LOCK_NODE);
         }
@@ -157,11 +162,17 @@ public class Client {
         }
 
         public void startPresentation(){
+            isPresenting = true;
             barrier.lock();
         }
 
-        public void stopPresentation(){
-            barrier.unlock();
+        public boolean stopPresentation(){
+            if(isPresenting){
+                isPresenting = false;
+                barrier.unlock();
+                return true;
+            }
+            return false;
         }
 
         public boolean waitPresentation(){
